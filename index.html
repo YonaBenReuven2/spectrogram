@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Spectrogram</title>
+<meta name="description" content="See the note you sing, how in tune it is, and how strong each overtone is: chest, mix or head voice.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1a2b'/%3E%3Crect x='5' y='24' width='22' height='2.5' fill='%239e2a3a'/%3E%3Crect x='6' y='6' width='4' height='16' rx='1.5' fill='%238bd3f7'/%3E%3Crect x='12' y='10' width='4' height='12' rx='1.5' fill='%23d4b26a'/%3E%3Crect x='18' y='14' width='4' height='8' rx='1.5' fill='%23d4b26a'/%3E%3Crect x='24' y='18' width='3' height='4' rx='1.5' fill='%23d4b26a'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1a2b">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="css/app.css?v=1">
+</head>
+<body>
+<header class="bar">
+  <h1>Spectrogram</h1>
+  <button id="micBtn" class="primary" title="Microphone on or off (M)">Start</button>
+  <button id="freezeBtn" title="Hold the picture still (Space)" aria-pressed="false" disabled>Freeze</button>
+  <div class="seg" id="viewSeg" aria-label="What the picture shows">
+    <button data-view="freq" aria-pressed="true" title="Every frequency the mic hears, low at the bottom (V)">Frequency</button>
+    <button data-view="harm" aria-pressed="false" title="One row per harmonic of the note you sing, so the pattern stays put as the pitch moves (V)">Harmonics</button>
+  </div>
+  <span class="spacer"></span>
+  <span id="micName" class="muted mic-name"></span>
+  <button id="setBtn" title="Settings (S)">Settings</button>
+</header>
+
+<main>
+  <section class="top">
+    <div class="panel note" id="notePanel">
+      <div class="note-name"><span id="nName">–</span><sub id="nOct"></sub></div>
+      <div class="tuner">
+        <div class="tuner-track" aria-hidden="true"><i class="zone"></i><i class="mid"></i><i id="needle" class="needle"></i></div>
+        <div class="tuner-read"><span id="nCents">Sing a note</span><span id="nHz" class="muted"></span></div>
+      </div>
+    </div>
+    <div class="panel reg" id="regPanel">
+      <div class="reg-head"><span class="eyebrow">Register <span id="regScale" class="tag"></span></span><strong id="regName">–</strong></div>
+      <div class="reg-track" aria-hidden="true"><span>Head</span><span>Mix</span><span>Chest</span><i id="regMark" class="reg-mark"></i></div>
+      <p id="regWhy" class="reg-why">Fewer overtones to the left, more to the right.</p>
+      <p id="regStats" class="muted reg-stats"></p>
+    </div>
+  </section>
+
+  <section class="panel bars">
+    <div class="eyebrow">The note and its overtones <span class="muted">· loudness of each, in dB under the strongest</span></div>
+    <div class="cv"><canvas id="bars"></canvas></div>
+  </section>
+
+  <section class="gram">
+    <div class="cv gram-main"><canvas id="gram"></canvas><canvas id="gramOver"></canvas></div>
+    <div class="strip-row"><span class="eyebrow">Register</span><div class="cv"><canvas id="strip"></canvas></div></div>
+    <div id="start" class="start">
+      <p class="start-title">See what your voice is made of</p>
+      <p>The note you sing, how in tune it is, and how strong each overtone is.</p>
+      <button id="startBtn" class="primary big">Start listening</button>
+      <p id="startMsg" class="start-msg" role="status"></p>
+      <button id="demoBtn" class="link">No mic handy? Watch a made-up voice glide from chest to head</button>
+    </div>
+  </section>
+</main>
+
+<dialog id="settings">
+  <form method="dialog" class="dlg-head"><h2>Settings</h2><button aria-label="Close">Close</button></form>
+  <div class="dlg-body">
+    <label class="row"><span>Microphone</span><select id="micSel"><option value="">Default</option></select></label>
+    <p class="hint">The browser's echo cancelling, noise suppression and automatic gain are turned off: they change the overtones. If Windows adds its own (Sound, your mic, <em>Audio enhancements</em>), turn those off too.</p>
+    <label class="row"><span>A4 is</span><span><input id="a4In" type="number" min="415" max="466" step="1"> Hz</span></label>
+
+    <h3>Teach it your voice</h3>
+    <p class="hint">The register meter starts on a generic scale. How strong the overtones come out also depends on your voice, the vowel and the mic, so for a reading that fits you, hold one comfortable note each way for a couple of seconds, on the same vowel (“ah” works well).</p>
+    <div class="row"><button id="calChest">Record chest</button><span id="calChestV" class="muted">not set</span></div>
+    <div class="row"><button id="calHead">Record head</button><span id="calHeadV" class="muted">not set</span></div>
+    <p id="calMsg" class="hint" role="status"></p>
+    <button id="calReset" class="link">Back to the generic scale</button>
+
+    <h3>Reading it</h3>
+    <p class="hint">Chest voice has a long closed phase in each vibration of the folds, which puts a lot of energy in the overtones: the 2nd and 3rd harmonic are often louder than the fundamental, and many more follow. In head voice the folds barely close, the fundamental carries the sound and the overtones fall away fast. Mix sits between. The meter combines three things: all the overtones together against the fundamental, the fundamental against the 2nd harmonic (H1−H2), and how fast the harmonics fall away (tilt).</p>
+    <p class="hint">Vowels move things too: a harmonic that lands on a resonance of the mouth gets a lift whatever the register. Compare like with like: the same vowel, a similar pitch.</p>
+    <p class="hint">The cents under each overtone are where it sits against the piano's tuning. They are the same for every voice (the 3rd harmonic is always a fifth 2 cents wide, the 5th a third 14 cents narrow), shifted by however sharp or flat you are.</p>
+    <p class="hint keys"><kbd>Space</kbd> freeze · <kbd>M</kbd> microphone · <kbd>V</kbd> frequency or harmonics · <kbd>S</kbd> settings</p>
+  </div>
+</dialog>
+
+<script src="js/dsp.js?v=1"></script>
+<script src="js/app.js?v=1"></script>
+<script src="js/pwa.js?v=1"></script>
+</body>
+</html>
